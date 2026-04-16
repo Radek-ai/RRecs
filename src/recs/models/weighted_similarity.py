@@ -130,15 +130,23 @@ class WeightedSimilarity(Recommender):
             ICSM = _zero_sparse(n)
 
         # --- Score matrix ---
-        customer_blend = (
-            self.w_customer_metadata * CSM
-            + self.w_customer_interactions * ICSM
-        )
-        product_blend = (
-            self.w_product_metadata * PSM
-            + self.w_product_interactions * IPSM
-        )
-        self._R = customer_blend @ I @ product_blend
+        # When all weights on a side are zero, use identity (= no blending)
+        # so the other side can still contribute.
+        if self.w_customer_metadata or self.w_customer_interactions:
+            customer_blend = (
+                self.w_customer_metadata * CSM
+                + self.w_customer_interactions * ICSM
+            )
+            self._R = customer_blend @ I
+        else:
+            self._R = I
+
+        if self.w_product_metadata or self.w_product_interactions:
+            product_blend = (
+                self.w_product_metadata * PSM
+                + self.w_product_interactions * IPSM
+            )
+            self._R = self._R @ product_blend
 
         return self
 
