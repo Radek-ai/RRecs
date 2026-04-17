@@ -12,10 +12,12 @@ dependencies = [
     "pandas",
     "scipy",
     "scikit-learn",
+    "tqdm",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+benchmark = ["matplotlib", "openpyxl"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

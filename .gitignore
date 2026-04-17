@@ -8,3 +8,5 @@ build/
 .pytest_cache/
 .ipynb_checkpoints/
 notebooks/data/
+benchmarks/data/
+benchmarks/results/

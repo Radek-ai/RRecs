@@ -42,7 +42,9 @@ class WeightedSimilarity(Recommender):
     metric : ``"cosine"`` | ``"overlap"``
         Similarity metric.
     top_k : int
-        Neighbours retained per row in every similarity matrix.
+        Default neighbours retained per row in similarity matrices.
+    top_k_psm, top_k_ipsm, top_k_csm, top_k_icsm : int | None
+        Per-matrix overrides.  When ``None``, falls back to *top_k*.
     """
 
     def __init__(
@@ -53,6 +55,10 @@ class WeightedSimilarity(Recommender):
         w_customer_interactions: float = 0.25,
         metric: Metric = "cosine",
         top_k: int = 100,
+        top_k_psm: int | None = None,
+        top_k_ipsm: int | None = None,
+        top_k_csm: int | None = None,
+        top_k_icsm: int | None = None,
     ) -> None:
         self.w_product_metadata = w_product_metadata
         self.w_product_interactions = w_product_interactions
@@ -60,6 +66,10 @@ class WeightedSimilarity(Recommender):
         self.w_customer_interactions = w_customer_interactions
         self.metric = metric
         self.top_k = top_k
+        self.top_k_psm = top_k_psm
+        self.top_k_ipsm = top_k_ipsm
+        self.top_k_csm = top_k_csm
+        self.top_k_icsm = top_k_icsm
 
         # Populated by fit()
         self._customer_idx: pd.Index | None = None
@@ -94,10 +104,15 @@ class WeightedSimilarity(Recommender):
         self._interactions = I
 
         # --- Product-side similarities (skip if weight is zero) ---
+        k_psm = self.top_k_psm if self.top_k_psm is not None else self.top_k
+        k_ipsm = self.top_k_ipsm if self.top_k_ipsm is not None else self.top_k
+        k_csm = self.top_k_csm if self.top_k_csm is not None else self.top_k
+        k_icsm = self.top_k_icsm if self.top_k_icsm is not None else self.top_k
+
         if self.w_product_metadata:
             PSM, _ = metadata_similarity(
                 products, "product_id", prod_meta_cols,
-                metric=self.metric, top_k=self.top_k,
+                metric=self.metric, top_k=k_psm,
             )
         else:
             PSM = _zero_sparse(m)
@@ -105,7 +120,7 @@ class WeightedSimilarity(Recommender):
         if self.w_product_interactions:
             IPSM, ipsm_idx = interaction_similarity(
                 interactions, "product_id", "customer_id", "weight",
-                metric=self.metric, top_k=self.top_k,
+                metric=self.metric, top_k=k_ipsm,
             )
             IPSM = self._reindex_sparse(IPSM, ipsm_idx, self._product_idx)
         else:
@@ -115,7 +130,7 @@ class WeightedSimilarity(Recommender):
         if self.w_customer_metadata:
             CSM, _ = metadata_similarity(
                 customers, "customer_id", cust_meta_cols,
-                metric=self.metric, top_k=self.top_k,
+                metric=self.metric, top_k=k_csm,
             )
         else:
             CSM = _zero_sparse(n)
@@ -123,7 +138,7 @@ class WeightedSimilarity(Recommender):
         if self.w_customer_interactions:
             ICSM, icsm_idx = interaction_similarity(
                 interactions, "customer_id", "product_id", "weight",
-                metric=self.metric, top_k=self.top_k,
+                metric=self.metric, top_k=k_icsm,
             )
             ICSM = self._reindex_sparse(ICSM, icsm_idx, self._customer_idx)
         else:
